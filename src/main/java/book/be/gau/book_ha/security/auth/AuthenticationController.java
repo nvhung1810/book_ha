@@ -53,9 +53,8 @@ public class AuthenticationController {
   }
 
   @PostMapping("/authenticate")
-  public ResponseEntity<AuthenticationResponse> authenticate(
+  public ResponseEntity<?> authenticate(
       @RequestBody AuthenticationRequest request) {
-    System.out.println("Log anything");
     try {
       return ResponseEntity.ok(service.authenticate(request));
     } catch (Exception e) {
