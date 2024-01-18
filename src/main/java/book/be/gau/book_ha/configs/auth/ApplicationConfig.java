@@ -19,22 +19,25 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @RequiredArgsConstructor
 public class ApplicationConfig {
-  private CustomerRepository repository;
+
+  // THIS IS BUG: BAT BUOC PHAI CO FINAL
+  private final CustomerRepository repository;
 
   @Bean
   public UserDetailsService userDetailsService() {
     return username -> repository
         .findByCustomerStaffEmail(username)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        .orElseThrow(
+            () -> new UsernameNotFoundException("User not found"));
   }
 
   @Bean
   public AuthenticationProvider authenticationProvider() {
-    DaoAuthenticationProvider daoAuthProvider = new DaoAuthenticationProvider();
-    daoAuthProvider.setUserDetailsService(userDetailsService());
-    daoAuthProvider.setPasswordEncoder(passwordEncoder());
+    DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
 
-    return daoAuthProvider;
+    authProvider.setUserDetailsService(userDetailsService());
+    authProvider.setPasswordEncoder(passwordEncoder());
+    return authProvider;
   }
 
   @Bean
@@ -43,8 +46,7 @@ public class ApplicationConfig {
   }
 
   @Bean
-  public AuthenticationManager authenticationManager(
-      AuthenticationConfiguration config) throws Exception {
+  public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
     return config.getAuthenticationManager();
   }
 

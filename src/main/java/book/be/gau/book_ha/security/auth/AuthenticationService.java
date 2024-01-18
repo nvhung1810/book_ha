@@ -9,7 +9,6 @@ import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,12 +17,16 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import book.be.gau.book_ha.configs.auth.JwtService;
+import book.be.gau.book_ha.dto.response.ErrorResponse;
+import book.be.gau.book_ha.dto.response.LoginResponse;
+import book.be.gau.book_ha.dto.response.RegisterData;
 import book.be.gau.book_ha.enums.Role;
 import book.be.gau.book_ha.enums.TokenType;
 import book.be.gau.book_ha.models.Customer;
 import book.be.gau.book_ha.models.Token;
 import book.be.gau.book_ha.repositories.CustomerRepository;
 import book.be.gau.book_ha.repositories.TokenRepository;
+import book.be.gau.book_ha.utils.PasswordValidator;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,13 +39,31 @@ public class AuthenticationService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final AuthenticationManager authenticationManager;
+  ZonedDateTime zTime = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
 
   @Autowired
   private MessageSourceAccessor messages;
+  @Autowired
+  PasswordValidator passwordValidator;
 
-  public AuthenticationResponse register(RegisterRequest request) {
+  public Object register(RegisterRequest request) {
     String registerMessagecsSuccess = messages.getMessage("register.success");
-    ZonedDateTime zTime = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+    String errorMessage = messages.getMessage("register.invalid-password");
+
+    if (!passwordValidator.isValidPassword(request.getLogin_password())) {
+      return ErrorResponse
+          .builder()
+          .message(errorMessage)
+          .status(HttpStatus.BAD_REQUEST.value())
+          .create_date(zTime)
+          .data(RegisterData
+              .builder()
+              .customer_post_code(request.getCustomer_post_code())
+              .customer_staff_email(request.getCustomer_staff_email())
+              .login_password(request.getLogin_password())
+              .build())
+          .build();
+    }
 
     var user = Customer
         .builder()
@@ -69,17 +90,26 @@ public class AuthenticationService {
         .build();
   }
 
-  public AuthenticationResponse authenticate(AuthenticationRequest request) {
+  public Object authenticate(AuthenticationRequest request) {
+    String registerMessagecsSuccess = messages.getMessage("login.success");
+
     try {
       authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(
               request.getCustomer_staff_email(),
               request.getLogin_password()));
     } catch (AuthenticationException e) {
-      throw new BadCredentialsException(
-          "Invalid username or password!!!!!!!!" +
-              request.getCustomer_staff_email() +
-              request.getLogin_password());
+      return ErrorResponse
+          .builder()
+          .message("Invalid username or password")
+          .status(HttpStatus.UNAUTHORIZED.value())
+          .create_date(zTime)
+          .data(LoginResponse
+              .builder()
+              .customer_staff_email(request.getCustomer_staff_email())
+              .login_password(request.getLogin_password())
+              .build())
+          .build();
     }
 
     var user = repository
@@ -94,8 +124,11 @@ public class AuthenticationService {
 
     return AuthenticationResponse
         .builder()
+        .message(registerMessagecsSuccess)
+        .status(HttpStatus.OK.value())
         .accessToken(jwtToken)
         .refreshToken(refreshToken)
+        .create_date(zTime)
         .build();
   }
 

@@ -21,5 +21,5 @@ public class ErrorResponse {
   @JsonFormat(shape = JsonFormat.Shape.STRING)
   private ZonedDateTime create_date;
 
-  private ResponseData data;
+  private Object data;
 }
