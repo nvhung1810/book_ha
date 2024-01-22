@@ -43,12 +43,14 @@ public class AuthenticationService {
   private String registerSuccessMessage;
   private String registerInvalidMessage;
   private String duplicateAccountMessage;
+  private String loginInvalid;
 
   @PostConstruct
   public void init() {
     registerSuccessMessage = messages.getMessage("register.success");
     registerInvalidMessage = messages.getMessage("register.invalid-password");
     duplicateAccountMessage = messages.getMessage("register.duplicate");
+    loginInvalid = messages.getMessage("login.invalid");
   }
 
   ZonedDateTime zTime = ZonedDateTime.now(TimezoneConstants.ASIA_HO_CHI_MINH_ID);
@@ -127,7 +129,7 @@ public class AuthenticationService {
     } catch (AuthenticationException e) {
       return ErrorResponse
           .builder()
-          .message("Invalid username or password")
+          .message(loginInvalid)
           .status(HttpStatus.UNAUTHORIZED.value())
           .create_date(zTime)
           .data(LoginResponse
@@ -155,6 +157,7 @@ public class AuthenticationService {
         .accessToken(jwtToken)
         .refreshToken(refreshToken)
         .create_date(zTime)
+        .user(user)
         .build();
   }
 

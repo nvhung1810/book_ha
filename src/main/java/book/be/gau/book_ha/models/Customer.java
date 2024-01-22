@@ -7,6 +7,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import book.be.gau.book_ha.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,6 +30,7 @@ import lombok.NonNull;
 @AllArgsConstructor
 @Entity
 @Table(name = "_customer")
+@JsonIgnoreProperties({ "username", "password" })
 public class Customer implements UserDetails {
   @Id
   @GeneratedValue
@@ -41,6 +45,7 @@ public class Customer implements UserDetails {
   private String customer_staff_email;
   private String customer_tel;
   @NonNull
+  @JsonIgnore
   private String login_password;
   private String create_date;
   private String update_date;
