@@ -1,7 +1,6 @@
 package book.be.gau.book_ha.security.auth;
 
 import java.io.IOException;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +26,8 @@ import book.be.gau.book_ha.models.Token;
 import book.be.gau.book_ha.repositories.CustomerRepository;
 import book.be.gau.book_ha.repositories.TokenRepository;
 import book.be.gau.book_ha.utils.PasswordValidator;
+import book.be.gau.book_ha.utils.TimezoneConstants;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,20 @@ public class AuthenticationService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final AuthenticationManager authenticationManager;
-  ZonedDateTime zTime = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+  private String registerSuccessMessage;
+  private String registerInvalidMessage;
+  private String duplicateAccountMessage;
+  private String loginInvalid;
+
+  @PostConstruct
+  public void init() {
+    registerSuccessMessage = messages.getMessage("register.success");
+    registerInvalidMessage = messages.getMessage("register.invalid-password");
+    duplicateAccountMessage = messages.getMessage("register.duplicate");
+    loginInvalid = messages.getMessage("login.invalid");
+  }
+
+  ZonedDateTime zTime = ZonedDateTime.now(TimezoneConstants.ASIA_HO_CHI_MINH_ID);
 
   @Autowired
   private MessageSourceAccessor messages;
@@ -47,13 +61,27 @@ public class AuthenticationService {
   PasswordValidator passwordValidator;
 
   public Object register(RegisterRequest request) {
-    String registerMessagecsSuccess = messages.getMessage("register.success");
-    String errorMessage = messages.getMessage("register.invalid-password");
-
+    // check password validity
     if (!passwordValidator.isValidPassword(request.getLogin_password())) {
       return ErrorResponse
           .builder()
-          .message(errorMessage)
+          .message(registerInvalidMessage)
+          .status(HttpStatus.BAD_REQUEST.value())
+          .create_date(zTime)
+          .data(RegisterData
+              .builder()
+              .customer_post_code(request.getCustomer_post_code())
+              .customer_staff_email(request.getCustomer_staff_email())
+              .login_password(request.getLogin_password())
+              .build())
+          .build();
+    }
+
+    // check duplicate account
+    if (repository.existsByCustomerStaffEmail(request.getCustomer_staff_email())) {
+      return ErrorResponse
+          .builder()
+          .message(duplicateAccountMessage)
           .status(HttpStatus.BAD_REQUEST.value())
           .create_date(zTime)
           .data(RegisterData
@@ -82,7 +110,7 @@ public class AuthenticationService {
 
     return AuthenticationResponse
         .builder()
-        .message(registerMessagecsSuccess)
+        .message(registerSuccessMessage)
         .status(HttpStatus.BAD_REQUEST.value())
         .accessToken(jwtToken)
         .refreshToken(refreshToken)
@@ -101,7 +129,7 @@ public class AuthenticationService {
     } catch (AuthenticationException e) {
       return ErrorResponse
           .builder()
-          .message("Invalid username or password")
+          .message(loginInvalid)
           .status(HttpStatus.UNAUTHORIZED.value())
           .create_date(zTime)
           .data(LoginResponse
@@ -129,6 +157,7 @@ public class AuthenticationService {
         .accessToken(jwtToken)
         .refreshToken(refreshToken)
         .create_date(zTime)
+        .user(user)
         .build();
   }
 

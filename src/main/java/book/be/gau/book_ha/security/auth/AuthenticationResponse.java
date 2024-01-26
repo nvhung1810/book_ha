@@ -26,4 +26,5 @@ public class AuthenticationResponse {
 
   private String message;
   private int status;
+  private Object user;
 }
